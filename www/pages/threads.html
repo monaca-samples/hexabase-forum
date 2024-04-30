@@ -1,0 +1,67 @@
+<template>
+  <div class="page" data-name="home">
+    <!-- Top Navbar -->
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner">
+        <div class="title sliding">Hexabase 掲示板スレッド</div>
+        <div class="right">
+          <a href="/form" class="link">
+            <i class="f7-icons">plus</i>
+          </a>
+        </div>
+      </div>
+    </div>
+    <!-- Scrollable page content-->
+    <div class="page-content">
+      <div class="data-table timecards">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>配信日</th>
+              <th>タイトル</th>
+              <th>重要度</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${records.map(r => $h`
+            <tr @click=${()=> click(r)}>
+              <td>${parseInt(r.get('id'))}</td>
+              <td>${dayjs(r.get('pubDate')).format('MM月DD日 hh:mm')}</td>
+              <td>${r.get('Title')}</td>
+              <td>${r.get('level') ? r.get('level').ja : ''}</td>
+            </tr>
+            `)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default (props, { $f7, $f7router, $on, $update }) => {
+    let records = []; // スレッド一覧用
+    // 画面が表示されたら呼び出されるイベント
+    $on('pageAfterIn', async (e, page) => {
+        const project = await client.currentWorkspace.project('Forum');
+        const thread = await project.datastore('Thread');
+        // スレッド一覧の取得
+        records = await thread.items();
+        // 画面を更新
+        $update();
+    });
+
+    // スレッド一覧をタップした際のイベント
+    const click = (record) => {
+        // スレッド詳細画面に遷移
+        $f7router.navigate(`/threads/${record.id}`, {
+            props: {
+                record,
+            },
+        });
+    }
+    return $render;
+  }
+</script>

@@ -1,0 +1,129 @@
+<template>
+  <div class="page" data-name="home">
+    <!-- Top Navbar -->
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner">
+        <div class="left">
+          <a href="#" class="link back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">Back</span>
+          </a>
+        </div>
+        <div class="title sliding">新規スレッド</div>
+      </div>
+    </div>
+
+    <!-- Scrollable page content-->
+    <div class="page-content">
+      <form id="report">
+        <div class="list">
+          <ul>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-input-wrap">
+                  <input type="text" name="Title" placeholder="掲示板のタイトル" value="掲示板のタイトル" />
+                  <span class="input-clear-button"></span>
+                </div>
+              </div>
+            </li>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-input-wrap">
+                  <input type="date" name="pubDate" placeholder="2022-02-10" value="2022-02-10" />
+                </div>
+              </div>
+            </li>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-input-wrap">
+                  <select name="level">
+                    <option value="通常" selected>通常</option>
+                    <option value="至急">至急</option>
+                    <option value="重要">重要</option>
+                  </select>
+                </div>
+              </div>
+            </li>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-input-wrap">
+                  <textarea name="body" class="resizable"></textarea>
+                </div>
+              </div>
+            </li>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-input-wrap">
+                  <input type="file" name="attachment" multiple />
+                </div>
+              </div>
+            </li>
+            <li>
+              <a href="#" @click=${save} class="list-button">保存する</a>
+            </li>
+          </ul>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script>
+export default (props, { $f7, $f7router }) => {    
+    // フォームのデータをオブジェクトに変換する関数
+    const formToObject = async (form) => {
+        // プロジェクト・データストアを取得
+        const project = await client.currentWorkspace.project('Forum');
+        const thread = await project.datastore('Thread');
+        // 新規アイテムを生成
+        const item = await thread.item();
+        // フォームの入力値をアイテムに適用する
+        const ary = Array.prototype.slice.call(form.elements);
+        for (const ele of ary) {
+            const { name, type, value } = ele;
+            // ファイルは別処理
+            if (type !== 'file') {
+                // 日付は日付型に変換
+                if (name === 'pubDate') {
+                    item.set(name, new Date(value));
+                } else {
+                    item.set(name, value);
+                }
+                continue;
+            }
+            // ファイルはHexabaseのファイルオブジェクトに変換
+            const files = ele.files.map(file => {
+                const f = item.file();
+                f
+                    .set('name', file.name)
+                    .set('data', file);
+                return f;
+            });
+            if (files.length > 0) item.set('attachment', files);
+        }
+        return item;
+    }
+
+    // 新しいスレッドを保存するイベント
+    const save = async (e) => {
+        // フォームデータをオブジェクトに変換
+        const item = await formToObject($(e.target).parents('form')[0]);
+        try {
+            // レコードの登録
+            const res = await item.save();
+            // データが登録できればメッセージ表示
+            const text = res ? '保存しました' : '保存失敗しました';
+            $f7.toast.create({
+                text,
+                position: 'top',
+                closeTimeout: 2000,
+            }).open();
+            $f7router.back();
+        } catch (e) {
+            console.log(e);
+        }
+    };
+    return $render;
+}
+</script>
